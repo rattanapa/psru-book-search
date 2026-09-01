@@ -29,7 +29,6 @@
                     <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
                     <span id="statusText">กำลังโหลดฐานข้อมูล...</span>
                 </div>
-                <!-- ปุ่มสำรองกรณีโหลดจากเซิร์ฟเวอร์ไม่ได้ -->
                 <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-lg border border-indigo-400/40 shadow-sm transition flex items-center gap-1">
                     <span>📁 เลือกไฟล์จากเครื่อง</span>
                     <input type="file" id="manualFileInput" accept=".xlsx, .xls" class="hidden">
@@ -128,16 +127,31 @@
         let rawData = [];
         let keysMap = { course: '', callno: '', title: '', collection: '', score: '' };
 
-        // ตรวจจับชื่อคอลัมน์ให้อัตโนมัติ (ไม่เกี่ยงตัวเล็ก-ใหญ่ หรือชื่อไทย/อังกฤษ)
         function detectKeys(row) {
             if (!row) return;
             const keys = Object.keys(row);
             
-            keysMap.course = keys.find(k => /course|วิชา|matched/i.test(k)) || keys[0];
-            keysMap.callno = keys.find(k => /call|เลขเรียก|bib/i.test(k)) || keys[1];
-            keysMap.title = keys.find(k => /title|ชื่อเรื่อง|book/i.test(k)) || keys[2];
-            keysMap.collection = keys.find(k => /collect|คอลเลกชัน|location/i.test(k)) || keys[3];
-            keysMap.score = keys.find(k => /similar|score|คะแนน|percent/i.test(k)) || keys[4];
+            // เจาะจงค้นหาชื่อวิชาที่เป็นชื่อเรื่อง/ข้อความก่อน โดยหลีกเลี่ยง ID/CODE/NO
+            keysMap.course = keys.find(k => /MATCHED_COURSE_NAME|COURSE_NAME|ชื่อรายวิชา|ชื่อวิชา/i.test(k))
+                || keys.find(k => /course|วิชา/i.test(k) && !/id|code|no|num|รหัส/i.test(k))
+                || keys.find(k => /course|วิชา/i.test(k))
+                || keys[0];
+
+            keysMap.callno = keys.find(k => /CALLNO|CALL_NO|เลขเรียก/i.test(k))
+                || keys.find(k => /call|เลข/i.test(k))
+                || keys[1];
+
+            keysMap.title = keys.find(k => /TITLE|ชื่อเรื่อง|ชื่อหนังสือ/i.test(k))
+                || keys.find(k => /title|book/i.test(k))
+                || keys[2];
+
+            keysMap.collection = keys.find(k => /COLLECTIONNAME|COLLECTION|คอลเลกชัน/i.test(k))
+                || keys.find(k => /collect|location/i.test(k))
+                || keys[3];
+
+            keysMap.score = keys.find(k => /SIMILARITY_SCORE|SIMILARITY|คะแนน/i.test(k))
+                || keys.find(k => /similar|score|percent/i.test(k))
+                || keys[4];
         }
 
         function getScore(row) {
@@ -145,12 +159,10 @@
             return (val > 0 && val <= 1) ? val * 100 : val;
         }
 
-        // โหลดอัตโนมัติเมื่อเปิดหน้าเว็บ
         window.addEventListener('DOMContentLoaded', () => {
             const possibleNames = ['data.xlsx', 'Data.xlsx', 'DATA.xlsx', 'data.xlsx.xlsx'];
             tryFetchFiles(possibleNames, 0);
 
-            // รองรับการเลือกไฟล์ด้วยตนเองกรณีฉุกเฉิน
             document.getElementById('manualFileInput').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -168,8 +180,8 @@
                 document.getElementById('tableBody').innerHTML = `
                     <tr>
                         <td colspan="5" class="p-8 text-center text-slate-500">
-                            <p class="font-bold text-red-600 mb-2">❌ ไม่พบไฟล์ data.xlsx ใน GitHub หรือไฟล์ยังตั้งชื่อไม่ถูกต้อง</p>
-                            <p class="text-xs text-slate-500 mb-3">คุณสามารถใช้ปุ่ม <b>"📁 เลือกไฟล์จากเครื่อง"</b> ตรงมุมขวาบนเพื่อทดสอบเปิดไฟล์ Excel ได้ทันที</p>
+                            <p class="font-bold text-red-600 mb-2">❌ ไม่พบไฟล์ data.xlsx ใน GitHub</p>
+                            <p class="text-xs text-slate-500 mb-3">สามารถใช้ปุ่ม <b>"📁 เลือกไฟล์จากเครื่อง"</b> ตรงมุมขวาบนเพื่อเลือกเปิดไฟล์ Excel ได้เลยครับ</p>
                         </td>
                     </tr>`;
                 return;
